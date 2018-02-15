@@ -1,6 +1,5 @@
 package com.splunk.modinput.jms;
 
-
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -8,6 +7,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.StringTokenizer;
+import java.io.InputStream;
 
 import javax.jms.Connection;
 import javax.jms.ConnectionFactory;
@@ -61,7 +61,7 @@ public class JMSModularInput extends ModularInput {
 
 		logger.info("Initialising JMS Mod Input");
 		JMSModularInput instance = new JMSModularInput();
-		instance.init(args);
+		instance.init(args, System.in);
 		logger.info("JMS Mod Input initialised");
 
 	}

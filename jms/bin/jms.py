@@ -8,7 +8,7 @@ Because Splunk can't directly invoke Java , we use this python wrapper script th
 simply proxys through to the Java program
 '''
 import os, sys, signal
-from subprocess import Popen
+from subprocess import Popen, PIPE
 
 JAVA_MAIN_CLASS = 'com.splunk.modinput.jms.JMSModularInput'
 MODINPUT_NAME = 'jms'
@@ -46,16 +46,14 @@ def usage():
 
 def do_run():
     xml_str = sys.stdin.read()
-    sys.argv.append(xml_str)
-    run_java()
+    run_java(xml_str)
 
 def do_scheme():
     run_java()
 
 def do_validate():
     xml_str = sys.stdin.read()
-    sys.argv.append(xml_str)
-    run_java()
+    run_java(xml_str)
 
 def build_windows_classpath():
     
@@ -65,7 +63,7 @@ def build_windows_classpath():
       classpath = classpath + rootdir+filename+";"
     return classpath
     
-def run_java():
+def run_java(xml_str=None):
     global process,SPLUNK_HOME,MODINPUT_HOME
     if sys.platform.startswith('linux') or sys.platform.startswith('sunos') or sys.platform.startswith('aix') or sys.platform.startswith('hp-ux') or sys.platform.startswith('freebsd')  or sys.platform == 'darwin':
         
@@ -97,10 +95,16 @@ def run_java():
     java_args = [ JAVA_EXECUTABLE, "-classpath",CLASSPATH,"-Xms64m","-Xmx64m","-Dsplunk.securetransport.protocol="+SECURE_TRANSPORT,"-Dsplunk.logging.level="+LOGGING_LEVEL,JAVA_MAIN_CLASS]
     java_args.extend(sys.argv[1:])
 
-    # Now we can run our command   
-    process = Popen(java_args)
+    # Now we can run our command
+
     if RUNMODE == 3:
+      process = Popen(java_args, stdin=PIPE)
+      process.stdin.write(xml_str)
+      process.stdin.close()
       writePidFile()
+    else:
+      process = Popen(java_args)
+
     # Wait for it to complete
     process.wait()
     sys.exit(process.returncode)

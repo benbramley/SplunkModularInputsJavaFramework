@@ -4,6 +4,7 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.io.InputStream;
 import java.net.Socket;
 import java.util.HashMap;
 import java.util.List;
@@ -184,7 +185,21 @@ public abstract class ModularInput {
 			return obj;
 
 		} catch (Exception e) {
-			logger.error("Error parsing XML : " + e.getMessage());
+			logger.error("Failed to parse XML : ", e);
+		}
+		return null;
+	}
+
+	protected static Object unmarshallXMLToObject(Class clazz, InputStream xml) {
+		try {
+			JAXBContext context = JAXBContext.newInstance(clazz);
+			Unmarshaller unmarshaller = context.createUnmarshaller();
+			Object obj = unmarshaller.unmarshal(xml);
+
+			return obj;
+
+		} catch (Exception e) {
+			logger.error("Failed to parse XML : ", e);
 		}
 		return null;
 	}
@@ -200,6 +215,10 @@ public abstract class ModularInput {
 	}
 
 	protected static Input getInput(String xml) {
+		return (Input) unmarshallXMLToObject(Input.class, xml);
+	}
+
+	protected static Input getInput(InputStream xml) {
 		return (Input) unmarshallXMLToObject(Input.class, xml);
 	}
 
@@ -223,27 +242,23 @@ public abstract class ModularInput {
 
 	}
 
-	protected void init(String[] args) {
+	protected void init(String[] args, InputStream stream) {
 
 		String loggingLevel = System.getProperty("splunk.logging.level",
 				"ERROR");
 		logger.setLevel(Level.toLevel(loggingLevel));
 		logger.info("Initialising Modular Input");
 		try {
-			if (args.length == 1) {
-				if (args[0].equals("--scheme")) {
+			if (args.length == 0) {
+				Input input = getInput(stream);
+				new SplunkConnectionPoller(input).start();
+				runStateCheckerThread(input);
+				doRun(input);
+			} else if (args.length == 1) {
+				if (args[0].equals("--scheme"))
 					doScheme();
-				} else {
-					Input input = getInput(args[0]);
-
-					new SplunkConnectionPoller(input).start();
-					runStateCheckerThread(input);
-					doRun(input);
-
-				}
 			} else if (args.length == 2) {
 				if (args[0].equals("--validate-arguments")) {
-
 					logger.info("Validating arguments");
 					Validation val = getValidation(args[1]);
 					doValidate(val);
